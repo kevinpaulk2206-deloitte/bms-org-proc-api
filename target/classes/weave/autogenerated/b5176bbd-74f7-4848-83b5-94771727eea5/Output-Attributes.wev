@@ -1,0 +1,29 @@
+%dw 2.0
+
+type auto_b5176bbd_74f7_4848_83b5_94771727eea5_Output_Attributes = {|
+  clientCertificate?: {|
+    publicKey?: {|  |}, 
+    "type"?: String, 
+    encoded?: Binary
+  |}, 
+  headers: {|
+    client_id: String, 
+    client_secret: String
+  |}, 
+  listenerPath: String, 
+  method: String, 
+  queryParams: {|  |}, 
+  queryString: String, 
+  relativePath: String, 
+  remoteAddress: String, 
+  requestPath: String, 
+  requestUri: String, 
+  scheme: String, 
+  uriParams: {|
+    "organizer-id": String, 
+    "show-id": String
+  |}, 
+  version: String, 
+  localAddress: String
+|}
+

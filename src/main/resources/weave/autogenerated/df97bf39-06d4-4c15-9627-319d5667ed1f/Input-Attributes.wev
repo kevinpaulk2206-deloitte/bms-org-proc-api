@@ -1,0 +1,32 @@
+%dw 2.0
+
+type auto_df97bf39_06d4_4c15_9627_319d5667ed1f_Input_Attributes = {|
+  clientCertificate?: {|
+    publicKey?: {|  |}, 
+    "type"?: String, 
+    encoded?: Binary
+  |}, 
+  headers: {|
+    client_id: String, 
+    client_secret: String
+  |}, 
+  listenerPath: String, 
+  method: String, 
+  queryParams: {|
+    pageSize?: Number, 
+    page?: Number, 
+    name?: String, 
+    status?: "active" | "nonActive", 
+    genre?: Array<String>
+  |}, 
+  queryString: String, 
+  relativePath: String, 
+  remoteAddress: String, 
+  requestPath: String, 
+  requestUri: String, 
+  scheme: String, 
+  uriParams: {| "organizer-id": String |}, 
+  version: String, 
+  localAddress: String
+|}
+

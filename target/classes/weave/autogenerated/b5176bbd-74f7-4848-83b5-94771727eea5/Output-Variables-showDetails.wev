@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_b5176bbd_74f7_4848_83b5_94771727eea5_Output_Variables_showDetails = Any
+

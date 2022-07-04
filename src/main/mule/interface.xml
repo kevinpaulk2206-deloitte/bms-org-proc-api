@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
+    <apikit:config name="bms-organizer-pro-api-config" api="resource::ddbd4ad5-6f2a-4406-8403-dd1be00842b9:temp-organizer:1.0.4:raml:zip:bms-organizer-pro-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <flow name="bms-organizer-pro-api-main">
+        <http:listener config-ref="bms-organizer-pro-api-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="bms-organizer-pro-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="put:\organizer\(organizer-id)\show\(show-id):application\json:bms-organizer-pro-api-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="showId"><![CDATA[attributes.uriParams."show-id"]]></ee:set-variable>
+                <ee:set-variable variableName="organizerId"><![CDATA[attributes.uriParams.'organizer-id']]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="Flow Reference" doc:id="831398a6-38f0-48ff-a794-ee77d6af5326" name="putShowById" />
+        <error-handler ref="error-handlerError_Handler" />
+    </flow>
+    <flow name="delete:\organizer\(organizer-id)\show\(show-id):bms-organizer-pro-api-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="organizerId"><![CDATA[attributes.uriParams."organizer-id"]]></ee:set-variable>
+                <ee:set-variable variableName="showId"><![CDATA[attributes.uriParams.'show-id']]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="Flow Reference" doc:id="c58e88ec-f22a-4658-99cc-db6c56a0b25c" name="deleteShowById" />
+        <error-handler ref="error-handlerError_Handler" />
+    </flow>
+    <flow name="get:\sold-tickets\(show-id):bms-organizer-pro-api-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="showId"><![CDATA[attributes.uriParams.'show-id']]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="Flow Reference" doc:id="42be6f89-ed97-434a-88dd-f7aa12206cdb" name="getSoldTicketCountFlow" />
+        <error-handler ref="error-handlerError_Handler" />
+    </flow>
+    <flow name="get:\organizer\(organizer-id)\show:bms-organizer-pro-api-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="organizerId"><![CDATA[attributes.uriParams.'organizer-id']]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="Flow Reference" doc:id="34b689d3-55ef-4428-95b2-bedb252d20fe" name="getAllShowFlow" />
+        <error-handler ref="error-handlerError_Handler" />
+    </flow>
+    <flow name="get:\organizer\(organizer-id)\show\(show-id):bms-organizer-pro-api-config">
+        <flow-ref doc:name="Flow Reference" doc:id="69d60742-4c8c-46d9-a4af-791602629ad7" name="getShowById" />
+        <error-handler ref="error-handlerError_Handler" />
+    </flow>
+    <flow name="post:\organizer:application\json:bms-organizer-pro-api-config">
+        <flow-ref doc:name="Flow Reference" doc:id="4e137648-99f5-4ab2-8c8d-ee24ece03ab7" name="postOrganizerFlow" />
+        <error-handler ref="error-handlerError_Handler" />
+    </flow>
+    <flow name="post:\organizer\(organizer-id)\show:application\json:bms-organizer-pro-api-config">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="organizerId"><![CDATA[attributes.uriParams.'organizer-id']]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <flow-ref doc:name="Flow Reference" doc:id="91dab68c-d29e-4f6f-a70b-1200c53f8fe2" name="postShowFlow" />
+        <error-handler ref="error-handlerError_Handler" />
+    </flow>
+</mule>

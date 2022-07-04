@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:request-config name="HTTP_Request_configuration2" doc:name="HTTP Request configuration" doc:id="c68009fa-a04c-4162-b672-9eede5738766" basePath="/api">
+		<http:request-connection host="${httpSmsReq.host}" port="${httpSmsReq.port}" />
+	</http:request-config>
+	<sub-flow name="postShowFlow" doc:id="266c56f3-c942-45fa-a525-8830248ff1db" >
+		<logger level="INFO" doc:name="INFO: Entered Post Show Flow" doc:id="6c59516d-3ca4-459d-b8d6-6d61fcc5540c" message="Entered Post Show Flow"/>
+		<foreach doc:name="For Each" doc:id="5c7712ff-44ec-48d6-8745-48f340e4da84" >
+			<ee:transform doc:name="Add Show Request Body" doc:id="278aaf65-e8bf-4727-9d1b-121e840e6134" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="showBody" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "Show_Name": payload.showName,
+  "Show_Date": payload.showDate,
+  "Show_Start_Time": payload.showStartTime,
+  "Show_End_Time": payload.showEndTime,
+  "Price": payload.price, 
+  "Seats": payload.seats ,
+  "Genre": payload.genre, 
+  "Active_Date": payload.activeDate,
+  "Address_Line_1": payload.addressLine1,
+  "Address_Line_2": payload.addressLine2,
+  "City": payload.city,
+  "State": payload.state,
+  "Country": payload.country,
+  "Pincode": payload.pincode,
+  "Org_Id": vars.organizerId as Number
+}]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<http:request method="POST" doc:name="Request To Add Show" doc:id="12117f69-2eba-419d-8997-792acf277f21" config-ref="HTTP_Request_configuration" path="/show" target="showOutput">
+			<http:body ><![CDATA[#[vars.showBody]]]></http:body>
+				<http:headers><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+		</http:request>
+			<ee:transform doc:name="Add Coupons Request Body" doc:id="a8a2f5f3-84da-4fd1-b0e3-25b1d9c1a707" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="couponOutput" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.coupon map {
+    "Show_Id": vars.showOutput.Show_Id,
+    "Top_Users": $.topUsers,
+    "Discount_Percentage": $.discountPercentage
+  }]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<http:request method="POST" doc:name="Request To Add Coupons" doc:id="b39a099e-8ae7-483e-8bf4-b5e96c0ee08c" config-ref="HTTP_Request_configuration" path="/coupon" target="showOutput" >
+				<http:body ><![CDATA[#[vars.couponOutput]]]></http:body>
+				<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+			</http:request>
+		</foreach>
+		<ee:transform doc:name="Added Successful Response" doc:id="af28265c-a6b5-4910-9692-5121bd5f3fd2" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "Shows Successfully Added"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="INFO: Added Show Successfully" doc:id="46a53d6f-3b2e-424a-a43d-c9cfeaf584fe" message="Added Show Successfully"/>
+	</sub-flow>
+	<sub-flow name="getAllShowFlow" doc:id="df97bf39-06d4-4c15-9627-319d5667ed1f" >
+		<logger level="INFO" doc:name="INFO: Fetching Show Details" doc:id="99a890f0-84cc-4c24-8c3a-010f76b74f83" message="Fetching Show Details"/>
+		<ee:transform doc:name="Initializing Show Details Var" doc:id="acc5e5b9-7eee-49c0-92ef-2ece990fa2c5" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="showDetails" ><![CDATA[%dw 2.0
+output application/json
+---
+[]]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<http:request method="GET" doc:name="Request To Fetch Show Details" doc:id="56f1e371-d350-41fe-8572-6b25c69e8e74" config-ref="HTTP_Request_configuration" path="/organizers/shows" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+			<http:query-params ><![CDATA[#[output application/java
+---
+attributes.queryParams ++ {orgId: vars.organizerId}]]]></http:query-params>
+		</http:request>
+		<foreach doc:name="For Each" doc:id="8a10d0c5-467f-4967-a18e-21d0752cae9e" >
+			<http:request method="GET" doc:name="Request To Fetch Coupon Details" doc:id="d92932ba-0d8f-4e30-9180-b13444a5b56b" config-ref="HTTP_Request_configuration" path="/coupon" target="outputCoupon">
+				<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+				<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"Show_Id" : payload.SHOW_ID
+}]]]></http:query-params>
+			</http:request>
+			<ee:transform doc:name="Aggregating Show Details" doc:id="095b698a-af89-488e-a913-80d8856e4fce" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="showDetails" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.showDetails ++ [{
+  "showId": payload.SHOW_ID,
+  "showName": payload.SHOW_NAME,
+  "showDate": payload.SHOW_DATE,
+  "showStartTime": payload.SHOW_START_TIME,
+  "showEndTime": payload.SHOW_END_TIME,
+  "price": payload.PRICE, 
+  "seats": payload.SEATS ,
+  "genre": payload.GENRE,
+  "coupon": vars.outputCoupon, 
+  "activeDate": payload.ACTIVE_DATE,
+  "addressLine1": payload.ADDRESS_LINE_1,
+  "addressLine2": payload.ADDRESS_LINE_2,
+  "city": payload.CITY,
+  "state": payload.STATE,
+  "country": payload.COUNTRY, 
+  "pincode": payload.PINCODE ,
+  "orgId": payload.ORG_ID
+}]]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</foreach>
+		<ee:transform doc:name="Setting Show Details As Payload" doc:id="f75c6156-8bf7-4b42-8529-36f48f91a214" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.showDetails]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<remove-variable doc:name="Remove Variable showDetails" doc:id="77ff2406-f7cd-414c-ba2d-daee8d3f2fd5" variableName="showDetails"/>
+		<remove-variable doc:name="Remove Variable outputCoupon" doc:id="dcfb1612-8416-4fd8-9f41-7206089c2bc1" variableName="outputCoupon"/>
+		<logger level="INFO" doc:name="INFO: Fetched Show Details" doc:id="40e5defc-0d1b-40f6-a85a-9bd92b5a6c50" message="Fetched Show Details"/>
+	</sub-flow>
+	<sub-flow name="postOrganizerFlow" doc:id="35a3ef37-499d-44e8-9214-2b2273e32935" >
+		<logger level="INFO" doc:name="INFO: Adding Organizer Details" doc:id="d5976f4f-5f6d-466e-91e1-9e15df84ea22" message="Adding Organizer Details"/>
+		<ee:transform doc:name="Add Organizer Request Body" doc:id="5706cc34-450d-4276-93a1-8c155163cdd9">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "Org_Name" : payload.orgName,
+    "Password": payload.Password,
+    "Email": payload.email,
+    "Address": payload.address,
+    "Phone_No": payload.phoneNo 
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<http:request method="POST" doc:name="Request To Add Organizer" doc:id="4c45fa67-300e-4f80-bd9a-3aca1fba3d72" config-ref="HTTP_Request_configuration" path="/organizers" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+		</http:request>
+		<logger level="INFO" doc:name="INFO: Added Organizer Details" doc:id="554478dd-1e83-4349-bcde-5a6961105c8c" message="Added Organizer Details"/>
+	</sub-flow>
+	<sub-flow name="getShowById" doc:id="b512cbb5-226a-4193-84e0-73651c3ef4a6" >
+		<logger level="INFO" doc:name="INFO: Fetching Show Details By Id" doc:id="e87dc7ab-c66b-4119-931a-46e4e7efa333" message="Fetching Show Details By Id"/>
+		<http:request method="GET" doc:name="Request To Fetch Show Details" doc:id="bb911828-c675-4f87-b77b-1a50e3b925a6" config-ref="HTTP_Request_configuration" path="/show/{showId}" target="showDetails">
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"showId" : attributes.uriParams."show-id"
+}]]]></http:uri-params>
+		</http:request>
+		<choice doc:name="Choice" doc:id="c836bc9b-6480-4cdc-931f-c77699b50608" >
+			<when expression='#[vars.showDetails.ORG_ID == (attributes.uriParams."organizer-id" as Number)]'>
+				<http:request method="GET" doc:name="Request To Fetch Show Coupons" doc:id="65e4a53b-77c1-457c-88ea-744e514cc1ef" config-ref="HTTP_Request_configuration" path="/coupon" target="outputCoupon" >
+					<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+					<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"Show_Id" : attributes.uriParams."show-id"
+}]]]></http:query-params>
+				</http:request>
+				<ee:transform doc:name="Java to Json" doc:id="0c27fe19-e6dd-4e41-a992-780b39ad29b0">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "showId": vars.showDetails.SHOW_ID,
+  "showName": vars.showDetails.SHOW_NAME,
+  "showDate": vars.showDetails.SHOW_DATE,
+  "showStartTime": vars.showDetails.SHOW_START_TIME,
+  "showEndTime": vars.showDetails.SHOW_END_TIME,
+  "price": vars.showDetails.PRICE, 
+  "seats": vars.showDetails.SEATS ,
+  "genre": vars.showDetails.GENRE,
+  "coupon": vars.outputCoupon, 
+  "activeDate": vars.showDetails.ACTIVE_DATE,
+  "addressLine1": vars.showDetails.ADDRESS_LINE_1,
+  "addressLine2": vars.showDetails.ADDRESS_LINE_2,
+  "city": vars.showDetails.CITY,
+  "state": vars.showDetails.STATE,
+  "country": vars.showDetails.COUNTRY, 
+  "pincode": vars.showDetails.PINCODE ,
+  "orgId": vars.showDetails.ORG_ID
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[vars.showDetails == null]">
+				<raise-error doc:name="No Such Show Is" doc:id="428768ee-bf92-4b04-9d8e-cd01dcd55d52" type="NOTFOUNT:NO_SUCH_SHOW_ID" description="Show Id Does Not Exist"/>
+			</when>
+			<otherwise >
+				<raise-error doc:name="Unauthorized Organizer Id" doc:id="4add9e9a-8e15-48fb-8028-1de302ab9f52" type="AUTH:UNAUTHORIZED_ORG_ID" description="Unauthorized Organizer Id"/>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="INFO: Fetched Show Details By Id" doc:id="d6174084-beaa-425b-97f7-1507b0fdab6f" message="Fetched Show Details By Id"/>
+	</sub-flow>
+	<sub-flow name="deleteShowById" doc:id="b5176bbd-74f7-4848-83b5-94771727eea5">
+		<logger level="INFO" doc:name="INFO: Deleting Show Details" doc:id="14db08fc-e125-4a9a-b22a-76ef43920d84" message="Deleting Show Details"/>
+		<flow-ref doc:name="Checking For Valid Show Id And Authorized Organizer" doc:id="3dc78735-dfc4-4317-bba7-0116b46b1655" name="getShowById" target="showDetails"/>
+		<http:request method="GET" doc:name="Request To Fetch Users Phone Numbers" doc:id="34b8c103-54ef-4b51-b14a-322745b1c489" config-ref="HTTP_Request_configuration" path="/show/user-phone" target="usersPhoneNumbers">
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+			<http:query-params ><![CDATA[#[{
+	"showId": vars.showId
+}]]]></http:query-params>
+		</http:request>
+		<http:request method="DELETE" doc:name=" Request To Delete Coupons" doc:id="5fa526a2-a631-4478-919b-82faa2eaebc1" config-ref="HTTP_Request_configuration" path="/coupon" target="showDetails" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"Show_Id" : vars.showId
+}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="Transform Message" doc:id="d58e04ee-8981-4327-828d-16fb68f28d94" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "from": "+12055128419",
+    "to": ["+916362022880"],
+    "body": "Hello Users,Unfortunately your booked show "++ vars.showId ++ " has been deleted!!"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<http:request method="POST" doc:name="Request To Send Deleted Show Message" doc:id="63c6e925-4c11-42db-b073-876ab97113d1" config-ref="HTTP_Request_configuration2" path="/send-sms" target="showDetails" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"showId" : vars.showId
+}]]]></http:uri-params>
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"Show_Id" : vars.showId
+}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="Delete Successful Response" doc:id="25c7e432-8563-4f5f-8bfb-9b758de54ff7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "Show Successfully Deleted"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="INFO: Deleted Show Details" doc:id="bfc7fa41-00bd-4dd6-9f4d-34ffe6c397cc" message="Deleted Show Details"/>
+	</sub-flow>
+	<sub-flow name="putShowById" doc:id="df052643-0486-4283-889b-f3e197e5428a" >
+		<logger level="INFO" doc:name="INFO: Updating Show Details" doc:id="19e51624-a5bf-4cc9-9b0e-f672ffb6ae63" message="Updating Show Details"/>
+		<set-variable value="#[payload]" doc:name="New Show Data" doc:id="7199626e-0b6a-4c63-b619-eff11978d7ff" variableName="newShowData" />
+		<flow-ref doc:name="Checking For Valid Show Id And Authorized Organizer" doc:id="d0822f1a-b50b-409a-bb49-7e10bd2600fc" name="getShowById"/>
+		<ee:transform doc:name="Update Show Request Body" doc:id="45eae186-6aef-41f1-8240-cb005db4b391" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "Show_Name": vars.newShowData.showName,
+  "Show_Date": vars.newShowData.showDate,
+  "Show_Start_Time": vars.newShowData.showStartTime,
+  "Show_End_Time": vars.newShowData.showEndTime,
+  "Price": vars.newShowData.price, 
+  "Seats": vars.newShowData.seats ,
+  "Genre": vars.newShowData.genre, 
+  "Active_Date": vars.newShowData.activeDate,
+  "Address_Line_1": vars.newShowData.addressLine1,
+  "Address_Line_2": vars.newShowData.addressLine2,
+  "City": vars.newShowData.city,
+  "State": vars.newShowData.state,
+  "Country": vars.newShowData.country,
+  "Pincode": vars.newShowData.pincode,
+  "Org_Id": vars.organizerId as Number
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<http:request method="PUT" doc:name="Request To Update Show" doc:id="064af388-0ac6-42b2-84fd-19dab7b9e5c1" config-ref="HTTP_Request_configuration" path="/show/{showId}" target="showDetails" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"showId" : vars.showId
+}]]]></http:uri-params>
+		</http:request>
+		<http:request method="DELETE" doc:name="Request To Delete Coupons" doc:id="6a5a418d-197d-4ef2-a5ea-e22130589706" config-ref="HTTP_Request_configuration" path="/coupon" target="showDetails" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"Show_Id" : vars.showId
+}]]]></http:query-params>
+		</http:request>
+		<ee:transform doc:name="Adding Show Id To New Coupons" doc:id="0d7afdb2-4e41-4899-b0e6-4fd90a629eba" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.newShowData.coupon map {
+    "Show_Id": vars.showId as Number,
+    "Top_Users": $.topUsers,
+    "Discount_Percentage": $.discountPercentage
+  }]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<http:request method="POST" doc:name="Request To Insert Coupons" doc:id="5ca4d154-3104-4151-9271-bb87c150abeb" config-ref="HTTP_Request_configuration" path="/coupon" target="showDetails" >
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+		</http:request>
+		<ee:transform doc:name="Update Successful Response" doc:id="69fd7f19-11e1-45d4-a7da-3b3bfd43cc52" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "show Successfully updated"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="INFO: Updated Show Details" doc:id="3c56eec1-8480-490a-8365-0047793f7863" message="Updated Show Details"/>
+	</sub-flow>
+	<sub-flow name="getSoldTicketCountFlow" doc:id="a59fcdb2-190e-4b1a-b8c1-b5d6a66b66ff" >
+		<logger level="INFO" doc:name="INFO: Fetching Sold Ticket Count From System Api" doc:id="4681c04b-0179-4fb3-9c2f-7cc6141a3f49" message="Fetching Sold Ticket Count From System Api"/>
+		<http:request method="GET" doc:name="Requesting System Api For Sold Ticket Count" doc:id="77cca029-f5b0-4448-ab0c-2ca11ab175f0" config-ref="HTTP_Request_configuration" path="/sold-tickets">
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"client_id" : p('secure::client_id'),
+	"client_secret": p('secure::client_secret')
+}]]]></http:headers>
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"Show_Id" : vars.showId
+}]]]></http:query-params>
+		</http:request>
+		<logger level="INFO" doc:name="INFO: Fetched Sold Ticket Count From System Api" doc:id="bf4c9b16-0d3a-4aba-8a6b-f5d4898484cb" />
+		<ee:transform doc:name="Java to Json" doc:id="69fad39c-431d-48aa-aa9a-f7ee3a3cf4ef" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+</mule>

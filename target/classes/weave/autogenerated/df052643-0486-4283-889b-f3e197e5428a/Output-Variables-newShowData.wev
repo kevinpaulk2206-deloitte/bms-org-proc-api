@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_df052643_0486_4283_889b_f3e197e5428a_Output_Variables_newShowData = Any
+
